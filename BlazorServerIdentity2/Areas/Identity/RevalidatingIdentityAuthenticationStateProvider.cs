@@ -6,11 +6,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+using System.Text;
 using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace BlazorServerIdentity2.Areas.Identity
 {
@@ -19,7 +21,7 @@ namespace BlazorServerIdentity2.Areas.Identity
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly IdentityOptions _options;
-        private ILogger logger;
+        private ILogger _logger;
 
         public RevalidatingIdentityAuthenticationStateProvider(
             ILoggerFactory loggerFactory,
@@ -29,7 +31,7 @@ namespace BlazorServerIdentity2.Areas.Identity
         {
             _scopeFactory = scopeFactory;
             _options = optionsAccessor.Value;
-            logger = loggerFactory.CreateLogger("RevalidatingIdentityAuthenticationStateProvider");
+            _logger = loggerFactory.CreateLogger("RevalidatingIdentityAuthenticationStateProvider");
         }
 
         protected override TimeSpan RevalidationInterval => TimeSpan.FromMinutes(30);
@@ -98,6 +100,61 @@ namespace BlazorServerIdentity2.Areas.Identity
                 }
             }
         }
+
+        public async Task<IdentityResult> ConfirmEmailAsync(TUser user,  string token)
+        {
+            if (user == null) return IdentityResult.Failed(new IdentityError() { Code = "ConfirmEmailAsync 1", Description = "user is null" });
+            if (string.IsNullOrEmpty(token)) return IdentityResult.Failed(new IdentityError() { Code = "ConfirmEmailAsync 2", Description = "token is null" });
+
+            // Get the user manager from a new scope to ensure it fetches fresh data
+            var scope = _scopeFactory.CreateScope();
+            try
+            {
+                //var userManager = scope.ServiceProvider.GetRequiredService<UserManager<TUser>>();
+                var luser = await userManager.ConfirmEmailAsync(user, token);
+                return IdentityResult.Success;
+            }
+            finally
+            {
+                if (scope is IAsyncDisposable asyncDisposable)
+                {
+                    await asyncDisposable.DisposeAsync();
+                }
+                else
+                {
+                    scope.Dispose();
+                }
+            }
+        }
+
+        public async Task<IdentityResult> ConfirmEmailPlusFindFirstAsync(string id, string token)
+        {
+            if (string.IsNullOrEmpty(id)) return IdentityResult.Failed(new IdentityError() { Code = "ConfirmEmailAsync 1", Description = "user is null" });
+            if (string.IsNullOrEmpty(token)) return IdentityResult.Failed(new IdentityError() { Code = "ConfirmEmailAsync 2", Description = "token is null" });
+
+            // Get the user manager from a new scope to ensure it fetches fresh data
+            var scope = _scopeFactory.CreateScope();
+            try
+            {
+                var userManagerx = scope.ServiceProvider.GetRequiredService<UserManager<TUser>>();
+                var user = await userManagerx.FindByIdAsync(id);
+                if (user == null) return null;
+                var result = await userManagerx.ConfirmEmailAsync(user, token);
+                return result;
+            }
+            finally
+            {
+                if (scope is IAsyncDisposable asyncDisposable)
+                {
+                    await asyncDisposable.DisposeAsync();
+                }
+                else
+                {
+                    scope.Dispose();
+                }
+            }
+        }
+
         public async Task<ClaimsPrincipal> CreateUserPrincipalAsync(TUser user)
         {
             
@@ -112,6 +169,7 @@ namespace BlazorServerIdentity2.Areas.Identity
             }
             catch(Exception ex)
             {
+                _logger.LogError(ex.Message);
                 return null;
             }
             finally
@@ -128,17 +186,15 @@ namespace BlazorServerIdentity2.Areas.Identity
         }
 
         public  async Task<IdentityResult> CreateAsync(TUser user, string password)
-        {
-            
-            if (user == null) return IdentityResult.Failed(new IdentityError() { Code = "CreateAsyn 1", Description = "user is null" });
-            if (string.IsNullOrEmpty(password)) return IdentityResult.Failed(new IdentityError() { Code = "CreateAsyn 2", Description = "password is null" });
-
+        {          
+            if (user == null) return IdentityResult.Failed(new IdentityError() { Code = "CreateAsync 1", Description = "user is null" });
+            if (string.IsNullOrEmpty(password)) return IdentityResult.Failed(new IdentityError() { Code = "CreateAsync 2", Description = "password is null" });
 
             var scope = _scopeFactory.CreateScope();
             try
             {
                 var userManager = scope.ServiceProvider.GetRequiredService<UserManager<TUser>>();
-                var resultCreateUser = await userManager.CreateAsync(user);
+                var resultCreateUser = await userManager.CreateAsync(user, password);
                 return resultCreateUser;
             }
             finally
@@ -153,9 +209,34 @@ namespace BlazorServerIdentity2.Areas.Identity
                 }
             }
         }
+
+        public async Task<TUser> FindByIdAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return null;
+
+            // Get the user manager from a new scope to ensure it fetches fresh data
+            var scope = _scopeFactory.CreateScope();
+            try
+            {
+                var userManager = scope.ServiceProvider.GetRequiredService<UserManager<TUser>>();
+                var user = await userManager.FindByIdAsync(id);
+                return user;
+            }
+            finally
+            {
+                if (scope is IAsyncDisposable asyncDisposable)
+                {
+                    await asyncDisposable.DisposeAsync();
+                }
+                else
+                {
+                    scope.Dispose();
+                }
+            }
+        }
+
         public async Task<TUser> FindByNameAsync(string username)
         {
-            
             if (string.IsNullOrEmpty(username)) return null;
 
             // Get the user manager from a new scope to ensure it fetches fresh data
@@ -190,6 +271,46 @@ namespace BlazorServerIdentity2.Areas.Identity
                 var claims = await userManager.GetClaimsAsync(user);
 
                 return claims;
+            }
+            finally
+            {
+                if (scope is IAsyncDisposable asyncDisposable)
+                {
+                    await asyncDisposable.DisposeAsync();
+                }
+                else
+                {
+                    scope.Dispose();
+                }
+            }
+        }
+
+
+        public async Task<string> GetUrl(TUser user, string id, string baseuri, string path)
+        {
+            var scope = _scopeFactory.CreateScope();
+            try
+            {
+                var userManager = scope.ServiceProvider.GetRequiredService<UserManager<TUser>>();
+                var code = await userManager.GenerateEmailConfirmationTokenAsync(user);
+                code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+                var queryparams = new Dictionary<string, string>()
+                {
+                    {"userid", id},
+                    { "code", code}
+                };
+                var callbackUrl = QueryHelpers.AddQueryString(baseuri + path, queryparams);
+                return callbackUrl;
+            }
+            catch (NullReferenceException)
+            {
+                // Something wasn't set yet, just return null
+                return null;
+            }
+            catch (Exception exp)
+            {
+                Console.WriteLine("Caught Expception {0}", exp.Message);
+                throw exp;
             }
             finally
             {
