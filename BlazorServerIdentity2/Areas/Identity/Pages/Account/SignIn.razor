@@ -1,0 +1,182 @@
+﻿@page "/SignIn"
+@using System.ComponentModel.DataAnnotations;
+@using System.Security.Claims;
+@using Microsoft.JSInterop;
+@using Microsoft.Extensions.Logging;
+@using Microsoft.AspNetCore.Identity;
+
+@using BlazorServerIdentity2.Areas.Identity;
+@using BlazorServerIdentity2.Components;
+
+@inject NavigationManager navman
+@inject ILogger<SignIn> _logger;
+@inject RevalidatingIdentityAuthenticationStateProvider<IdentityUser> _riasp
+
+<h1 class="text-center">Sign In</h1>
+<hr />
+<div class="container">
+    <div class="row">
+        <div class="col-md-6">
+            <h4>Use a local account to log in.</h4>
+            <section>
+                <AuthorizeView>
+                    <NotAuthorized Context="NoAuth">
+                        <div class="container text-right">
+                            <EditForm Model="@input" OnInvalidSubmit="@InvalidSubmit" OnValidSubmit="@ValidSubmit">
+                                <DataAnnotationsValidator />
+                                <ValidationSummary />
+                                <ServerSideValidator @ref="serverSideValidator" />
+                                <hr />
+                                <div class="form-group row ">
+                                    <div class="col">
+                                        <label for="username">Email</label>
+                                        <InputText id="username" @bind-Value="input.Email" Width="100%" />
+                                        <ValidationMessage For="@(() => input.Email)" />
+                                    </div>
+
+                                </div>
+                                <div class="form-group row ">
+                                    <div class="col">
+                                        <label for="Password">Password</label>
+                                        <InputText id="Password" @bind-Value="input.Password" type="password" Width="100%" />
+                                        <ValidationMessage For="@(() => input.Password)" />
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <div class="col text-center">
+                                        <label for="rememberMe">Remember Me</label>
+                                        <InputCheckbox id="rememberMe" @bind-Value="@input.RememberMe" />
+                                    </div>
+                                </div>
+                                <div class="col text-center">
+                                    <button type="submit" class="btn btn-primary">SignIn</button>
+                                </div>
+                                <div class="form-group text-left">
+                                    <NavLink class="nav-link" href="/PasswordForgot">
+                                        <span class="oi oi-lock-locked oi-question-mark" aria-hidden="true"></span> Forgot your password?
+                                    </NavLink>
+                                    <NavLink class="nav-link" href="/SignUp">
+                                        <span class="oi oi-pencil" aria-hidden="true"></span> Sign Up as a new user
+                                    </NavLink>
+                                    <NavLink class="nav-link" href="/ResendConfirmationEmail">
+                                        <span class="oi oi-envelope-closed" aria-hidden="true"></span> Resend Confirmation Email
+                                    </NavLink>
+                                </div>
+                            </EditForm>
+                        </div>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </section>
+        </div>
+        <div class="col-md-4 col-md-offset-2">
+            <section>
+                <h4>Use another service to log in.</h4>
+                <hr />
+                @{
+                    //if ((Model.ExternalLogins?.Count ?? 0) == 0)
+                    if (true)
+                    {
+                        <div>
+                            <p>
+                                There are no external authentication services configured. See <a href="https://go.microsoft.com/fwlink/?LinkID=532715">this article</a>
+                                for details on setting up this ASP.NET application to support logging in via external services.
+                            </p>
+                        </div>
+                    }
+                    @*else
+                        {
+                            <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="form-horizontal">
+                                <div>
+                                    <p>
+                                        @foreach (var provider in Model.ExternalLogins)
+                                        {
+                                            <button type="submit" class="btn btn-primary" name="provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">@provider.DisplayName</button>
+                                        }
+                                    </p>
+                                </div>
+                            </form>
+                        }*@
+                }
+            </section>
+        </div>
+    </div>
+
+</div>
+
+@code {
+    [CascadingParameter] public Task<AuthenticationState> AuthenticationStateTask { get; set; }
+    [Parameter] public string ReturnUrl { get; set; } = "/";
+    public AuthenticationState AuthState { get; set; }
+    public ClaimsPrincipal CPUser { get; set; }
+
+    private class DtoSignIn
+    {
+        [Required]
+        [Display(Name = "Email *")]
+        [DataType(DataType.EmailAddress)]
+        public string Email { get; set; }
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Password { get; set; }
+
+        [Display(Name = "Remember me?")]
+        public bool RememberMe { get; set; }
+
+        //TODO: this may need an attribute
+        public string Token { get; set; }
+    }
+
+    /// <summary>
+    /// Sign In object for new user
+    /// </summary>
+    private DtoSignIn input { get; set; } = new DtoSignIn();
+
+    /// <summary>
+    /// Object to process a dictionary of errors per field and display them on form
+    /// </summary>
+    public ServerSideValidator serverSideValidator;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AuthState = await AuthenticationStateTask;
+        CPUser = AuthState.User;
+    }
+
+    /// <summary>
+    /// Invoked by <EditForm> when submit button is clicked.
+    /// </summary>
+    /// <returns></returns>
+    private async Task ValidSubmit()
+    {
+        //_logger.LogStandard();
+        // Does the username currently exist?
+        var user = await _riasp.FindByNameAsync(input.Email);
+        if (user == null)
+        {
+            serverSideValidator.AddError(input, nameof(input.Email), "Sorry, couldn't find that Email Name");
+            return;
+        }
+
+        var isPasswordOk = await _riasp.CheckPasswordAsync(user, input.Password);
+        if (!isPasswordOk)
+        {
+            serverSideValidator.AddError(input, nameof(input.Password), "Sorry, incorrect password");
+            return;
+        }
+
+        var result = await _riasp.PasswordSignInAsync(user.UserName, input.Password, input.RememberMe, false);
+        if (!result.Succeeded)
+        {
+            serverSideValidator.AddError(input, nameof(input.Email), "Sorry, Could not Sign you in");
+            return;
+        }
+        navman.NavigateTo(ReturnUrl);
+        return;
+    }
+
+    private void InvalidSubmit()
+    {
+        return;
+    }
+}
