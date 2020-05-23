@@ -1,0 +1,96 @@
+﻿@page "/SignUpEmailConfirmed"
+
+@using System.Text;
+@using Microsoft.Extensions.Logging;
+@using Microsoft.AspNetCore.Identity;
+@using Microsoft.AspNetCore.WebUtilities;
+@using BlazorServerIdentity2.Areas.Identity.Extensions;
+@using BlazorServerIdentity2.Areas.Identity;
+
+@inject NavigationManager navman;
+@inject ILogger<SignUpEmailConfirmed> _logger;
+@inject RevalidatingIdentityAuthenticationStateProvider<IdentityUser> _riasp;
+
+@if (!string.IsNullOrEmpty(StatusMessage))
+{
+    <div class="container"  >
+        <h3 class="text-center">@StatusMessage</h3>
+        @if (showSignIn)
+        {
+            <p class="text-center"><button type="button" class="btn btn-primary" @onclick="LSignIn">Sign In</button></p>
+        }
+    </div>
+}
+
+
+
+@****************************************************************************@
+@code {
+    public string userId;
+    public string code;
+    public string StatusMessage { get; set; }
+    public bool showSignIn { get; set; }
+
+    //TODO: Protect the userId and token code
+    // Only so many minutes in the day to slay dragons.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            navman.TryGetQueryString<string>("userId", out userId);
+            navman.TryGetQueryString<string>("code", out code);
+            await Run();
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+        return;
+    }
+
+    // Why do I put code in it's own method instead of inline of OnAfterRenderAsync/
+    // Because maybe OnParamsSet or OnInitialized would be better.  This way I can just move the call instead of the code.
+    // Performance?  Maintenance is always more expensive than performance.
+    private async Task Run()
+    {
+        if (string.IsNullOrEmpty(userId))
+        {
+            StatusMessage = "Invalid User Id";
+            StateHasChanged();
+            return;
+        }
+
+        var token = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code));
+
+        // If you FindById, EF will hold onto the record because of the Key used.  
+        // When you attempt to Confirm the Email address, an InvalidOperationException is thrown
+        // System.InvalidOperationException: The instance of entity type 'IdentityUser' cannot be tracked because another instance with the same key value for {'Id'} is already being tracked. When attaching existing entities, ensure that only one entity instance with a given key value is attached. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see the conflicting key values.
+        // This is a bit of a conumdrum because either both calls have to use the same UserManager instance inside RIASP, or you have to find by Name, which is not a key.
+        // Neither are particularly good options.
+        // I guess one solution is to combine the 2 operations into one.
+        //var user = await _riasp.FindByIdAsync(userId);
+        //if (user == null)
+        //{
+        //    var Ex = new NullReferenceException("Could not find userId={0:userId}");
+        //    throw Ex;
+        //}
+
+        //var result = await _riasp.ConfirmEmailAsync(user, token);
+        var result = await _riasp.ConfirmEmailPlusFindFirstAsync(userId, token);
+        if (!result.Succeeded)
+        {
+            StatusMessage = "Error: " + result.Errors.ToList()[0].Code + ":" + result.Errors.ToList()[0].Description;
+            StateHasChanged();
+            return;
+        }
+
+        var user =  await _riasp.FindByIdAsync(userId);
+
+        StatusMessage = "Thank you " + user.UserName + " for confirming your email. Please Sign In to complete your profile.";
+        showSignIn = true;
+        StateHasChanged();
+    }
+
+    public void LSignIn()
+    {
+        navman.NavigateTo("/SignIn");
+    }
+}
