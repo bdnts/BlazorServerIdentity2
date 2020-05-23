@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using BlazorServerIdentity2.Areas.Identity;
 using BlazorServerIdentity2.Data;
+using Microsoft.AspNetCore.Components.Server;
 
 namespace BlazorServerIdentity2
 {
@@ -38,7 +39,20 @@ namespace BlazorServerIdentity2
                 .AddEntityFrameworkStores<ApplicationDbContext>();
             services.AddRazorPages();
             services.AddServerSideBlazor();
-            services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<IdentityUser>>();
+            //services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<IdentityUser>>();
+            #region Box 2
+            services.AddScoped<RevalidatingIdentityAuthenticationStateProvider<IdentityUser>>();
+            services.AddScoped<AuthenticationStateProvider>(s => s.GetRequiredService<RevalidatingIdentityAuthenticationStateProvider<IdentityUser>>());
+            services.AddScoped<IHostEnvironmentAuthenticationStateProvider>(sp =>
+            {
+                // this is safe because 
+                //     the `RevalidatingIdentityAuthenticationStateProvider` extends the `ServerAuthenticationStateProvider`
+                var provider = (ServerAuthenticationStateProvider)sp.GetRequiredService<AuthenticationStateProvider>();
+                return provider;
+            });
+
+            #endregion
+
             services.AddSingleton<WeatherForecastService>();
         }
 
