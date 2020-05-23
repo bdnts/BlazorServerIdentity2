@@ -1,0 +1,21 @@
+﻿@page "/SignOut"
+@using Microsoft.AspNetCore.Identity;
+@using Microsoft.Extensions.Logging;
+
+@inject NavigationManager navman;
+@inject ILogger<SignOut> _logger;
+@inject RevalidatingIdentityAuthenticationStateProvider<IdentityUser> _riasp
+
+<AuthorizeView>
+    <NotAuthorized>
+        <h2>Not Signed In.  Sign In before Signing out</h2>
+    </NotAuthorized>
+    <Authorized>
+        @if (true)
+        {
+            Task.Run(() => _riasp.SignOutAsync());
+            navman.NavigateTo("/");
+        }
+    </Authorized>
+</AuthorizeView>
+
