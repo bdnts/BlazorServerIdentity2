@@ -181,3 +181,17 @@ app {
         display: block;
     }
 }
+
+/*****************************************************/
+/* Custom stuff to make it purty */
+/*****************************************************/
+.signin-icon-padding {
+    padding-right: .5rem;
+}
+
+.oi
+.oi-envelope-closed
+.oi-pencil
+.oi-question-mark {
+    padding-right: 1rem;
+}
