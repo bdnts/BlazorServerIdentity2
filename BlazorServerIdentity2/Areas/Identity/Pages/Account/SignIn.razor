@@ -1,7 +1,6 @@
 ﻿@page "/SignIn"
 @using System.ComponentModel.DataAnnotations;
 @using System.Security.Claims;
-@using Microsoft.JSInterop;
 @using Microsoft.Extensions.Logging;
 @using Microsoft.AspNetCore.Identity;
 
@@ -17,29 +16,31 @@
 <div class="container">
     <div class="row">
         <div class="col-md-6">
-            <h4>Use a local account to log in.</h4>
+            <hr />
             <section>
                 <AuthorizeView>
                     <NotAuthorized Context="NoAuth">
-                        <div class="container text-right">
+                        <div class="container">
                             <EditForm Model="@input" OnInvalidSubmit="@InvalidSubmit" OnValidSubmit="@ValidSubmit">
                                 <DataAnnotationsValidator />
                                 <ValidationSummary />
                                 <ServerSideValidator @ref="serverSideValidator" />
                                 <hr />
-                                <div class="form-group row ">
-                                    <div class="col">
-                                        <label for="username">Email</label>
-                                        <InputText id="username" @bind-Value="input.Email" Width="100%" />
-                                        <ValidationMessage For="@(() => input.Email)" />
-                                    </div>
+                                <div class="container-fluid mycontainer">
+                                    <div class="form-group row ">
+                                        <div class="col">
+                                            <label for="username">Email</label>
+                                            <InputText class="mycontainer-inputsize" id="username" @bind-Value="input.Email" Width="100%" />
+                                            <ValidationMessage For="@(() => input.Email)" />
+                                        </div>
 
-                                </div>
-                                <div class="form-group row ">
-                                    <div class="col">
-                                        <label for="Password">Password</label>
-                                        <InputText id="Password" @bind-Value="input.Password" type="password" Width="100%" />
-                                        <ValidationMessage For="@(() => input.Password)" />
+                                    </div>
+                                    <div class="form-group row ">
+                                        <div class="col">
+                                            <label for="Password">Password</label>
+                                            <InputText class="mycontainer-inputsize" id="Password" @bind-Value="input.Password" type="password" Width="100%" />
+                                            <ValidationMessage For="@(() => input.Password)" />
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="form-group row">
@@ -51,7 +52,7 @@
                                 <div class="col text-center">
                                     <button type="submit" class="btn btn-primary">SignIn</button>
                                 </div>
-                                <div class="form-group text-left">
+                                <div class="form-group mycontainer-signin-navlinks">
                                     <NavLink class="nav-link" href="/PasswordForgot">
                                         <span class="oi oi-lock-locked oi-question-mark" aria-hidden="true"></span> Forgot your password?
                                     </NavLink>
@@ -83,24 +84,10 @@
                             </p>
                         </div>
                     }
-                    @*else
-                        {
-                            <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="form-horizontal">
-                                <div>
-                                    <p>
-                                        @foreach (var provider in Model.ExternalLogins)
-                                        {
-                                            <button type="submit" class="btn btn-primary" name="provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">@provider.DisplayName</button>
-                                        }
-                                    </p>
-                                </div>
-                            </form>
-                        }*@
                 }
             </section>
         </div>
     </div>
-
 </div>
 
 @code {
@@ -149,7 +136,6 @@
     /// <returns></returns>
     private async Task ValidSubmit()
     {
-        //_logger.LogStandard();
         // Does the username currently exist?
         var user = await _riasp.FindByNameAsync(input.Email);
         if (user == null)
