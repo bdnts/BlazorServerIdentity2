@@ -41,10 +41,10 @@ app {
             margin-left: 1.5rem;
         }
 
-.main .top-row a:first-child {
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+        .main .top-row a:first-child {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
 
 .sidebar {
     background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);
@@ -182,6 +182,7 @@ app {
     }
 }
 
+
 /*****************************************************/
 /* Custom stuff to make it purty */
 /*****************************************************/
@@ -194,4 +195,21 @@ app {
 .oi-pencil
 .oi-question-mark {
     padding-right: 1rem;
+}
+
+.mycontainer {
+    text-align: right !important;
+    padding-left: 0rem;
+    padding-right: 12%;
+}
+
+.mycontainer-inputsize {
+    width: 68%;
+    padding: unset;
+}
+
+.mycontainer-signin-navlinks {
+    padding-top: .5rem;
+    padding-right: 0rem;
+    padding-left: 5%;
 }
