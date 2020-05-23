@@ -119,6 +119,48 @@ I've probably spent more time writing this Readme than building this project!
 
 If someone can help with the browser cookie, I think this can be a real sweet _out of the box_ solution.
 
+### Base 01.01.00 SignUp
+Adding SignUp to system.
+
+Encountered the dreaded `Entity cannot be tracked` error.
+  
+```
+System.InvalidOperationException: The instance of entity type 'IdentityUser' cannot be tracked because another instance with the same key value for {'Id'} is already being tracked. When attaching existing entities, ensure that only one entity instance with a given key value is attached. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see the conflicting key values.`
+I was using a pattern of `FindById()` and then `ConfirmEmailAsync()
+```  
+
+Because the Find is by Id, the Key, Entity Framework locks the record in one DBContext, and then I can't write to it with a different context (`ConfirmEmailAsync()`).
+While there might be a elegant way to deal with this, I haven't found it. 
+I've gone through all the usual answers found on SO, but none worked for me.
+When using a common UserManager, this issue doesn't occur because it is the same DBContext.
+With RIASP, each call spins up a new UserManager, so `FindById()` and `ConfirmEmailAsync()` use different instances and different DBContexts.
+Of the several possible solutions, the simplest is to combine the 2 operations into one new operation.
+So I created `ConfirmEmailPlusFindByIdAsync()` that performs both with one UserManager.  
+This has no analog in UserManager, which I've tried to keep RIASP aligned to.  But alas, it is not a perfect world.
+
+* *RevalidatingIdentityAuthenticationStateProvider.razor*
+  * Added _ to logger
+  * Added `ConfirmEmailAsync()`
+  * Added `ConfirmEmailPlusFindFirstAsync()`
+  * Added `CreateAsync()`
+  * Added `FindByIdAsynd()`
+  * Added `GetUrl()`
+* *SignUp.razor* *SignUp.razor.cs* *SignUpEmailConfirmed.razor*
+  * All 3 added to support SignUp flow.
+* *LoginDisplay.razor*
+  * Modified to display a SignUp item.
+* *BlazorServerSIdentity2.csproj*
+* Added package `Microsoft.AspNetCore.Components.DataAnnotations.Validation" Version="3.2.0-rc1.20223.4`
+ to support the `[Compare]` operator.
+
+* *site.css*
+  * Added some new classes to help align SignUp and SignIn
+*SignIn.razor* 
+  * Beautified and better aligned things
+*IdentityExtensions*  **Bonus**
+* This is a extender class for Identity classes.  For now, just Navigationmanager.
+Chris Sainty had posted an extension on how to attributes off the URL.  I used it and incorporated it.
+This isn't absolutely necessary, but he does good work, I borrowed/stole it, but give him attribution.  Enjoy.
 
 ## Base 01.00.00
 * Required changes to make this solution work.
@@ -138,5 +180,5 @@ If someone can help with the browser cookie, I think this can be a real sweet _o
     * Minor addition adding Components to imports list
   *site.css*
     * Minor addition to help things line up.
-* *ServerSideValidator.cs*
+* *ServerSideValidator.cs* **Bonus**
   * Bonus method for doing validation of EditForms
