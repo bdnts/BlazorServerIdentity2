@@ -5,3 +5,12 @@
 Welcome to your new app.
 
 <SurveyPrompt Title="How is Blazor working for you?" />
+
+<AuthorizeView>
+    <NotAuthorized>
+        No one is signed in
+    </NotAuthorized>
+    <Authorized>
+        @context.User.Identity.Name is signed in
+    </Authorized>
+</AuthorizeView>
