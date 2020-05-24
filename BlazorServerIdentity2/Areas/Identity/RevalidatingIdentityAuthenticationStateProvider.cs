@@ -110,7 +110,7 @@ namespace BlazorServerIdentity2.Areas.Identity
             var scope = _scopeFactory.CreateScope();
             try
             {
-                //var userManager = scope.ServiceProvider.GetRequiredService<UserManager<TUser>>();
+                var userManager = scope.ServiceProvider.GetRequiredService<UserManager<TUser>>();
                 var luser = await userManager.ConfirmEmailAsync(user, token);
                 return IdentityResult.Success;
             }
