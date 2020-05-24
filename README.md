@@ -119,6 +119,10 @@ I've probably spent more time writing this Readme than building this project!
 
 If someone can help with the browser cookie, I think this can be a real sweet _out of the box_ solution.
 
+#### Base 01.01.01 Bug fix
+* *RevalidatingIdentityAuthenticationStateProvider.razor*
+  * Restored generation of usermanager
+  
 ### Base 01.01.00 SignUp
 Adding SignUp to system.
 
@@ -182,3 +186,4 @@ This isn't absolutely necessary, but he does good work, I borrowed/stole it, but
     * Minor addition to help things line up.
 * *ServerSideValidator.cs* **Bonus**
   * Bonus method for doing validation of EditForms
+
